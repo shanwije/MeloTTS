@@ -13,5 +13,7 @@ RUN python -m unidic download
 RUN python -c "import nltk; nltk.download('averaged_perceptron_tagger_eng')"
 RUN python melo/init_downloads.py
 
-EXPOSE 8888
-CMD ["python", "./melo/app.py", "--host", "0.0.0.0", "--port", "8888"]
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8080 50051
+CMD ["python", "./melo/openai_api.py", "--host", "0.0.0.0", "--port", "8080", "--grpc-port", "50051"]

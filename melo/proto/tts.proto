@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package melotts;
+
+service MeloTTS {
+  rpc SynthesizeSpeechStream(SpeechRequest) returns (stream AudioChunk);
+  rpc ListVoices(Empty) returns (VoiceList);
+}
+
+message Empty {}
+
+message SpeechRequest {
+  string text = 1;
+  string voice = 2;
+  float speed = 3;
+  string format = 4;
+}
+
+message AudioChunk {
+  bytes audio_data = 1;
+  int32 sample_rate = 2;
+  int32 chunk_index = 3;
+  bool is_last = 4;
+}
+
+message Voice {
+  string name = 1;
+  string language = 2;
+}
+
+message VoiceList {
+  repeated Voice voices = 1;
+}

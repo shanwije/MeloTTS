@@ -31,6 +31,93 @@ Some other features include:
 
 The Python API and model cards can be found in [this repo](https://github.com/myshell-ai/MeloTTS/blob/main/docs/install.md#python-api) or on [HuggingFace](https://huggingface.co/myshell-ai).
 
+## Server Deployment
+
+MeloTTS exposes two server interfaces:
+
+| Interface | Port | Use Case |
+|-----------|------|----------|
+| OpenAI-compatible REST API | 8080 | LiteLLM proxy, standard HTTP clients |
+| gRPC streaming | 50051 | Low-latency sentence-level audio streaming |
+
+### Docker
+
+```bash
+docker build -t melotts .
+docker run -p 8080:8080 -p 50051:50051 melotts
+```
+
+### Local
+
+```bash
+make setup
+make api       # starts both REST (8080) + gRPC (50051)
+make grpc      # starts gRPC server only
+```
+
+### REST API (OpenAI-compatible)
+
+```bash
+curl http://localhost:8080/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Hello world", "voice": "en-us"}' \
+  --output test.wav
+```
+
+Available endpoints:
+- `POST /v1/audio/speech` — synthesize speech
+- `GET /v1/audio/voices` — list available voices
+- `GET /v1/models` — list models
+- `GET /health` — health check
+
+### gRPC Streaming
+
+The gRPC server streams audio chunks per sentence for low-latency playback. Proto definition: `melo/proto/tts.proto`
+
+```python
+import grpc
+from melo.proto import tts_pb2, tts_pb2_grpc
+
+channel = grpc.insecure_channel("localhost:50051")
+stub = tts_pb2_grpc.MeloTTSStub(channel)
+
+request = tts_pb2.SpeechRequest(text="Hello world. How are you?", voice="en-us", speed=1.0)
+for chunk in stub.SynthesizeSpeechStream(request):
+    with open(f"chunk_{chunk.chunk_index}.wav", "wb") as f:
+        f.write(chunk.audio_data)
+```
+
+### LiteLLM Proxy Configuration
+
+To use MeloTTS as a TTS backend via LiteLLM:
+
+```yaml
+model_list:
+  - model_name: melo-tts
+    litellm_params:
+      model: openai/melo-tts
+      api_base: http://<HOST>:8080/v1
+      api_key: "placeholder"
+```
+
+### AWS Deployment
+
+**EC2 (recommended for simplicity):**
+- Instance type: `c5.xlarge` or larger (CPU inference)
+- Security group: open ports 8080 (REST) and 50051 (gRPC)
+- Run via Docker or systemd
+
+```bash
+docker run -d --restart unless-stopped \
+  -p 8080:8080 -p 50051:50051 \
+  melotts
+```
+
+**ECS/Fargate alternative:**
+- Use ALB for REST traffic (port 8080)
+- Use NLB for gRPC traffic (port 50051, HTTP/2)
+- Task definition: 2 vCPU, 4GB memory minimum
+
 **Contributing**
 
 If you find this work useful, please consider contributing to this repo.
