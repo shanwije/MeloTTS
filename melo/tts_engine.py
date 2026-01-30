@@ -21,10 +21,14 @@ def init_models(device: str = "auto"):
     for lang in languages:
         model = TTS(language=lang, device=device)
         _models[lang] = model
-        for speaker_name in model.hps.data.spk2id:
+        for speaker_name in model.hps.data.spk2id.keys():
             voice_key = speaker_name.lower()
             _voice_to_language[voice_key] = lang
             _voice_to_speaker[voice_key] = speaker_name
+
+
+def get_models() -> dict[str, TTS]:
+    return _models
 
 
 def get_voices() -> list[str]:

@@ -69,14 +69,21 @@ async def health():
 @click.option("--port", "-p", type=int, default=8080)
 @click.option("--device", "-d", default="auto")
 @click.option("--grpc-port", type=int, default=50051, help="gRPC server port (0 to disable)")
-def main(host, port, device, grpc_port):
+@click.option("--ui-port", type=int, default=0, help="Gradio UI port (0 to disable)")
+def main(host, port, device, grpc_port, ui_port):
     logging.basicConfig(level=logging.INFO)
     tts_engine.init_models(device)
 
+    grpc_server = None
     if grpc_port:
         from melo.grpc_server import serve as grpc_serve
         grpc_server = grpc_serve(grpc_port)
         logger.info("gRPC server started on port %d", grpc_port)
+
+    if ui_port:
+        from melo.app import launch_ui
+        launch_ui(host=host, port=ui_port)
+        logger.info("Gradio UI started on port %d", ui_port)
 
     import uvicorn
     uvicorn.run(app, host=host, port=port)

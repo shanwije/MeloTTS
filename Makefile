@@ -1,21 +1,22 @@
 VENV := .venv
-PYTHON := $(VENV)/bin/python
-PIP := $(VENV)/bin/pip
-SSL_CERT_FILE := $(shell $(PYTHON) -c "import certifi; print(certifi.where())" 2>/dev/null)
+PYTHON := uv run
+SSL_CERT_FILE := $(shell $(PYTHON) python -c "import certifi; print(certifi.where())" 2>/dev/null)
 
 export SSL_CERT_FILE
 
-.PHONY: install setup ui tts play clean proto api grpc
+.PHONY: install setup serve ui tts play clean proto api grpc
 
 install:
-	python3.12 -m venv $(VENV)
-	$(PIP) install --upgrade pip
-	$(PIP) install -e .
-	$(PIP) install soxr
-	$(PYTHON) -m unidic download
+	uv venv $(VENV) --python 3.12
+	uv pip install -e .
+	uv pip install soxr
+	$(PYTHON) python -m unidic download
 
 setup: install
 	$(PYTHON) melo/init_downloads.py
+
+serve:
+	$(PYTHON) melo/openai_api.py --host 0.0.0.0 --port 8080 --grpc-port 50051 --ui-port 8888
 
 ui:
 	$(PYTHON) melo/app.py --host 0.0.0.0 --port 8888
@@ -43,4 +44,4 @@ grpc:
 	$(PYTHON) melo/grpc_server.py --port 50051
 
 clean:
-	rm -rf $(VENV) *.egg-info build dist
+	rm -rf $(VENV) *.egg-info build dist uv.lock
